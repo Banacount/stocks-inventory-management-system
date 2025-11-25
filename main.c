@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <conio.h>
 
 //Global variables
 int loginCount = 0;
@@ -17,6 +18,7 @@ int getRandomSeed();
 void decrypt(char *encrypted_text, int seed);
 void encrypt(char *text, int seed);
 void getInput(char *output_dest, size_t output_size);
+void getInputHidden(char *output_dest, size_t output_size);
 void registering();
 void login(char *file_name);
 
@@ -47,6 +49,34 @@ void getInput(char *output_dest, size_t output_size){
   fflush(stdin);
   return;
 }
+//Sigma male input
+void getInputHidden(char *output_dest, size_t output_size){
+  int ch, str_count;
+  strcpy(output_dest, "");
+  str_count = 0;
+
+  while(1){
+    ch = _getch();
+    if(ch == 27 || ch == 13) break;
+    if(str_count > output_size-1 && ch != 8) continue;
+
+    if(ch == 8){
+      //Handle backspace frfr
+      if(str_count > 0){
+        output_dest[str_count-1] = '\0';
+        str_count--;
+        printf("\b \b");
+      }
+    } else if(ch >= 32 && ch <= 126){
+      output_dest[str_count] = (char)ch;
+      printf("*");
+      str_count++;
+    }
+    output_dest[str_count] = '\0';
+  }
+
+  return;
+}
 
 //Register stock process
 void registering(){
@@ -64,27 +94,48 @@ void registering(){
   getInput(account.userPassword, sizeof(account.userPassword));
   encrypt(account.userPassword, account.seed);
 
-  FILE *file = fopen(file_name, "wb");
-  if(file == NULL){
+  FILE *f = fopen(file_name, "wb");
+  if(f == NULL){
     printf("File creation error\n");
     return;
   }
-  fwrite(&account, sizeof(account), 1, file);
+  fwrite(&account, sizeof(account), 1,f);
+  fclose(f);
   printf("Register process done!\n");
   return;
 }
 
 //Still justs prints sum info not actually "loging in"
 void login(char *file_name){
-  stock account;
-  FILE *file = fopen(file_name, "rb");
-  if(file == NULL){
+  stock account; stock cmp;
+  char fileN[406];
+  sprintf_s(fileN, sizeof(fileN),"%s.stock", file_name);
+
+  FILE *f = fopen(fileN, "rb");
+  if(f == NULL){
     printf("File probably doesn't exist");
     return;
   }
 
-  fread(&account, sizeof(account), 1, file);
-  printf("Username %s, Password %s. Seed is %d.\n", account.userName, account.userPassword, account.seed);
+  fread(&account, sizeof(account), 1, f);
+  printf("Enter username: ");
+  getInput(cmp.userName, sizeof(cmp.userName));
+  printf("Enter password: ");
+  getInputHidden(cmp.userPassword, sizeof(cmp.userPassword));
+
+  //Decrypt the account fr
+  decrypt(account.userName, account.seed);
+  decrypt(account.userPassword, account.seed);
+
+  int isUser = strcmp(account.userName, cmp.userName);
+  int isPass = strcmp(account.userPassword, cmp.userPassword);
+  if(isUser == 0 && isPass == 0){
+    printf("\nYou right frfr!");
+  } else {
+    printf("\nFake ahh nigga.");
+  }
+
+  fclose(f);
   return;
 }
 
