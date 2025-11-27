@@ -45,6 +45,7 @@ void inventoryMenu(FILE *file_pointer);
 void disAssemInv(FILE *file_pointer);
 void addInventory(FILE *file_pointer);
 void invUIHead();
+void invUIlist(Inventory inventory, int isLast);
 
 int main(int arg_count, char *args[]){
   UINT oldcon = GetConsoleOutputCP(); SetConsoleOutputCP(CP_UTF8);
@@ -288,13 +289,11 @@ void inventoryMenu(FILE *file_pointer){
     fread(&inv_count, sizeof(inv_count), 1, file_pointer);
     fread(&sale_count, sizeof(sale_count), 1, file_pointer);
     clearScr();
+    invUIHead();
     for(int i = 0; i < inv_count; i++){
       fread(&inv, sizeof(inv), 1, file_pointer);
-      printf("[ Item code ] == %d\n", inv.item_id);
-      printf("[ Item name ] == %s\n", inv.item_name);
-      printf("[ Item quantity ] == %d\n", inv.item_quantity);
-      printf("[ Item price ] == %.2fPHP\n", inv.item_price);
-      printf("\n");
+      if(i == inv_count-1) invUIlist(inv, 1);
+      else invUIlist(inv, 0);
     }
     printf("Total Items [ %d ]\n", inv_count);
     printf("[ D ] Delete an inventory item. \n");
@@ -327,5 +326,18 @@ void invUIHead(){
   printf("│ Item Code    │ Item Name           │ Item Quantity │ Item Price        │\n");
   printf("├──────────────┼─────────────────────┼───────────────┼───────────────────┤\n");
 };
-void invUIlist(Inventory inventory){
+void invUIlist(Inventory inventory, int isLast){
+  printf("│              │                     │               │                   │");
+  printf("\r\033[2C");
+  printf("%d", inventory.item_id);
+  printf("\r\033[17C");
+  printf("%s", inventory.item_name);
+  printf("\r\033[39C");
+  printf("%d", inventory.item_quantity);
+  printf("\r\033[56C");
+  printf("%.2f", inventory.item_price);
+  printf("\033[1B\r");
+  if(isLast == 0) printf("├──────────────┼─────────────────────┼───────────────┼───────────────────┤");
+  else printf("└──────────────┴─────────────────────┴───────────────┴───────────────────┘");
+  printf("\033[1B\r");
 }
