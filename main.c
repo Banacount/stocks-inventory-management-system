@@ -37,12 +37,14 @@ void decrypt(char *encrypted_text, int seed);
 void encrypt(char *text, int seed);
 void getInput(char *output_dest, size_t output_size);
 void getInputHidden(char *output_dest, size_t output_size);
+void getInputValidChars(char *output_dest, size_t output_size);
 void registering();
 void login(char *file_name);
 void clearScr();
 void inventoryMenu(FILE *file_pointer);
 void disAssemInv(FILE *file_pointer);
 void addInventory(FILE *file_pointer);
+void invUIHead();
 
 int main(int arg_count, char *args[]){
   UINT oldcon = GetConsoleOutputCP(); SetConsoleOutputCP(CP_UTF8);
@@ -57,7 +59,6 @@ int main(int arg_count, char *args[]){
     }
   }
 
-  //inventoryMenu();
   SetConsoleOutputCP(oldcon);
   return 0;
 }
@@ -102,6 +103,60 @@ void getInputHidden(char *output_dest, size_t output_size){
     } else if(ch >= 32 && ch <= 126){
       output_dest[str_count] = (char)ch;
       printf("*");
+      str_count++;
+    }
+    output_dest[str_count] = '\0';
+  }
+
+  return;
+}
+void getInputValidChars(char *output_dest, size_t output_size){
+  int ch, str_count;
+  strcpy(output_dest, "");
+  str_count = 0;
+
+  while(1){
+    ch = _getch();
+    if(ch == 27 || ch == 13) break;
+    if(str_count > output_size-1 && ch != 8) continue;
+
+    if(ch == 8){
+      //Handle backspace frfr
+      if(str_count > 0){
+        output_dest[str_count-1] = '\0';
+        str_count--;
+        printf("\b \b");
+      }
+    } else if(ch >= 32 && ch <= 126){
+      output_dest[str_count] = (char)ch;
+      printf("%c", (char)ch);
+      str_count++;
+    }
+    output_dest[str_count] = '\0';
+  }
+
+  return;
+}
+void getInputOnlyNum(char *output_dest, size_t output_size){
+  int ch, str_count;
+  strcpy(output_dest, "");
+  str_count = 0;
+
+  while(1){
+    ch = _getch();
+    if(ch == 27 || ch == 13) break;
+    if(str_count > output_size-1 && ch != 8) continue;
+
+    if(ch == 8){
+      //Handle backspace frfr
+      if(str_count > 0){
+        output_dest[str_count-1] = '\0';
+        str_count--;
+        printf("\b \b");
+      }
+    } else if((ch >= 48 && ch <= 57) || ch == 46){
+      output_dest[str_count] = (char)ch;
+      printf("%c", (char)ch);
       str_count++;
     }
     output_dest[str_count] = '\0';
@@ -171,7 +226,7 @@ void login(char *file_name){
     loginCount--;
     if(loginCount > 0){
       printf("\033[91m\033[5m");
-      printf("Wrong password! Login attempt left is %d.\n", loginCount);
+      printf("Wrong password or username! Login attempt left is %d.\n", loginCount);
       printf("\033[0m");
     } else {
       printf("Last try.\n");
@@ -206,10 +261,16 @@ void addInventory(FILE *file_pointer){
   fread(&sale_count, sizeof(sale_count), 1, file_pointer);
 
   int new_inv_count = inv_count + 1;
+  char priceBuff[100], quantBuff[80];
   to_add.item_id = new_inv_count;
-  strcpy_s(to_add.item_name, sizeof(to_add.item_name), "test bruh");
-  to_add.item_price = 12.99;
-  to_add.item_quantity = 10;
+  printf("\033[92mEnter Item Name: \033[0m");
+  getInputValidChars(to_add.item_name, sizeof(to_add.item_name));
+  printf("\033[92m\nEnter Item Price: \033[0m");
+  getInputOnlyNum(priceBuff, sizeof(priceBuff));
+  printf("\033[92m\nEnter Item Quantity: \033[0m");
+  getInputOnlyNum(quantBuff, sizeof(quantBuff));
+  to_add.item_price = atof(priceBuff);
+  to_add.item_quantity = atoi(quantBuff);
   long write_pos = sizeof(stock) + (sizeof(int) * 2) + (sizeof(Inventory) * (long)inv_count);
 
   fseek(file_pointer, write_pos, SEEK_SET);
@@ -260,4 +321,11 @@ void inventoryMenu(FILE *file_pointer){
         break;
     }
   }
+}
+void invUIHead(){
+  printf("┌──────────────┬─────────────────────┬───────────────┬───────────────────┐\n");
+  printf("│ Item Code    │ Item Name           │ Item Quantity │ Item Price        │\n");
+  printf("├──────────────┼─────────────────────┼───────────────┼───────────────────┤\n");
+};
+void invUIlist(Inventory inventory){
 }
