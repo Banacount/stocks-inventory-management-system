@@ -50,6 +50,7 @@ void inventoryMenu();
 void disAssemInv(FILE *file_pointer);
 void addInventory(int item_id);
 void deleteInv();
+void updateInvItem();
 void invUIHead();
 void invUIlist(Inventory inventory);
 
@@ -265,6 +266,26 @@ void encrypt(char *text, int seed){
 }
 
 //Inventory methods
+void updateInvItem(){
+  int chosen_id; char id_buff[7]; char choose[1];
+  printf("Put the item ID: ");
+  getInputOnlyNum(id_buff, sizeof(id_buff));
+  chosen_id = atoi(id_buff);
+
+  FILE *f = fopen(INV_FILE, "rb+");
+  if(f == NULL){
+    printf("Error opening file.");
+    return;
+  }
+
+  Inventory item;
+  while(fread(&item, sizeof(item), 1, f)){
+    if(item.item_id == chosen_id){
+      printf("Data found: %d, %s\n", item.item_id, item.item_name);
+      //Make sumn crazy update UI here lmao
+    }
+  }
+}
 void deleteInv(){
   int id_to_delete; char id_buff[7]; char choose[1];
   printf("Put the item ID: ");
@@ -283,7 +304,7 @@ void deleteInv(){
     if(id_to_delete == loop.item_id){
       printf("\033[92m");
       printf("Data found: %d, %s\n", loop.item_id, loop.item_name);
-      printf("[ ] Type 1_if(yes) / 0_if(no)\r[");
+      printf("[ ] Type '1' if(yes) / '0' if(no)\r[");
       getInputOnlyNum(choose, sizeof(choose));
       if(atoi(choose) == 1){
         loop.isExist = false;
