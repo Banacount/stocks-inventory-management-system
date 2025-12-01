@@ -53,6 +53,8 @@ void deleteInv();
 void updateInvItem();
 void invUIHead();
 void invUIlist(Inventory inventory);
+void salesMenu();
+
 
 int main(int arg_count, char *args[]){
   UINT oldcon = GetConsoleOutputCP(); SetConsoleOutputCP(CP_UTF8);
@@ -61,7 +63,7 @@ int main(int arg_count, char *args[]){
     if(strcmp("-register", args[1]) == 0){
       registering();
     } else if(strcmp("-login", args[1]) == 0){
-      if(arg_count >= 3)login(args[2]);
+      if(arg_count >= 3) login(args[2]);
     } else {
       printf("Argument not found..\n");
     }
@@ -71,11 +73,11 @@ int main(int arg_count, char *args[]){
   return 0;
 }
 
+
 //Clear screen frfr
 void clearScr(){
   system("cls");
 }
-
 //Get random seed lol
 int getRandomSeed(){
   srand(time(NULL));
@@ -99,7 +101,7 @@ void getInputHidden(char *output_dest, size_t output_size){
   while(1){
     ch = _getch();
     if(ch == 27 || ch == 13) break;
-    if(str_count > output_size-1 && ch != 8) continue;
+    if(str_count >= output_size-1 && ch != 8) continue;
 
     if(ch == 8){
       //Handle backspace frfr
@@ -126,7 +128,7 @@ void getInputValidChars(char *output_dest, size_t output_size){
   while(1){
     ch = _getch();
     if(ch == 27 || ch == 13) break;
-    if(str_count > output_size-1 && ch != 8) continue;
+    if(str_count >= output_size-1 && ch != 8) continue;
 
     if(ch == 8){
       //Handle backspace frfr
@@ -153,7 +155,7 @@ void getInputOnlyNum(char *output_dest, size_t output_size){
   while(1){
     ch = _getch();
     if(ch == 27 || ch == 13) break;
-    if(str_count > output_size-1 && ch != 8) continue;
+    if(str_count >= output_size-1 && ch != 8) continue;
 
     if(ch == 8){
       //Handle backspace frfr
@@ -233,7 +235,8 @@ void login(char *file_name){
   int isUser = strcmp(account.userName, cmp.userName);
   int isPass = strcmp(account.userPassword, cmp.userPassword);
   if(isUser == 0 && isPass == 0){
-    inventoryMenu();
+    //inventoryMenu();
+    salesMenu();
   } else if(loginCount > 0){
     clearScr();
     loginCount--;
@@ -244,6 +247,7 @@ void login(char *file_name){
     } else {
       printf("Last try.\n");
     }
+    fclose(f);
     login(file_name);
   } else {
     printf("\nLogin attempts ran out.\n");
@@ -267,7 +271,7 @@ void encrypt(char *text, int seed){
 
 //Inventory methods
 void updateInvItem(){
-  int chosen_id; char id_buff[7]; char choose[1];
+  int chosen_id; char id_buff[8]; char choose[4];
   printf("Put the item ID: ");
   getInputOnlyNum(id_buff, sizeof(id_buff));
   chosen_id = atoi(id_buff);
@@ -281,13 +285,49 @@ void updateInvItem(){
   Inventory item;
   while(fread(&item, sizeof(item), 1, f)){
     if(item.item_id == chosen_id){
-      printf("Data found: %d, %s\n", item.item_id, item.item_name);
-      //Make sumn crazy update UI here lmao
+      printf("\n\033[92m");
+      printf("Data found: %d, %s.\n", item.item_id, item.item_name);
+      char quantBuff[8], priceBuff[15];
+      
+      printf("[   ] Modify item name (yes/no).\r\033[1C");
+      strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
+      printf("\033[1B\r");
+      if(strcmp(choose, "yes") == 0){
+        printf("Change Item Name: ");
+        getInputValidChars(item.item_name, sizeof(item.item_name));
+        printf("\n");
+      }
+
+      strcpy(choose, ""); printf("[   ] Modify item quantity (yes/no).\r\033[1C");
+      getInputValidChars(choose, sizeof(choose));
+      printf("\033[1B\r");
+      if(strcmp(choose, "yes") == 0){
+        printf("Change Item Quantity: ");
+        getInputValidChars(quantBuff, sizeof(quantBuff));
+        if(strlen(quantBuff) > 0) item.item_quantity = atoi(quantBuff);
+        printf("\n");
+      }
+
+      printf("[   ] Modify item price (yes/no).\r\033[1C");
+      strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
+      printf("\033[1B\r");
+      if(strcmp(choose, "yes") == 0){
+        printf("Change Item Price: ");
+        getInputValidChars(priceBuff, sizeof(priceBuff));
+        if(strlen(priceBuff) > 0) item.item_price = atof(priceBuff);
+        printf("\n");
+      }
+
+      fseek(f, sizeof(item)*-1, SEEK_CUR);
+      fwrite(&item, sizeof(item), 1, f); fclose(f);
+      printf("\033[0m");
+      Sleep(1500);
+      break;
     }
   }
 }
 void deleteInv(){
-  int id_to_delete; char id_buff[7]; char choose[1];
+  int id_to_delete; char id_buff[8]; char choose[2];
   printf("Put the item ID: ");
   getInputOnlyNum(id_buff, sizeof(id_buff));
   printf("\n");
@@ -303,7 +343,7 @@ void deleteInv(){
   while(fread(&loop, sizeof(loop), 1, f)){
     if(id_to_delete == loop.item_id){
       printf("\033[92m");
-      printf("Data found: %d, %s\n", loop.item_id, loop.item_name);
+      printf("Data found: %d, %s.\n", loop.item_id, loop.item_name);
       printf("[ ] Type '1' if(yes) / '0' if(no)\r[");
       getInputOnlyNum(choose, sizeof(choose));
       if(atoi(choose) == 1){
@@ -329,7 +369,7 @@ void addInventory(int item_id){
   Inventory to_add;
   int sale_count;
 
-  char priceBuff[14], quantBuff[7];
+  char priceBuff[15], quantBuff[8];
   to_add.item_id = item_id;
   printf("\033[92mEnter Item Name: \033[0m");
   getInputValidChars(to_add.item_name, sizeof(to_add.item_name));
@@ -384,7 +424,7 @@ void inventoryMenu(){
         addInventory(end_of_inv);
         break;
       case 'u':
-        printf("Update inventory option\n");
+        updateInvItem();
         break;
       case 's':
         printf("Search option\n");
@@ -420,4 +460,12 @@ void invUIlist(Inventory inventory){
   printf("\033[1B\r");
   printf("├──────────────┼─────────────────────┼───────────────┼───────────────────┤");
   printf("\033[1B\r");
+}
+
+//Sales type shit
+void salesMenu(){
+  clearScr();
+  printf("┌──────────┬───────────┬─────────────────────┬──────────┬────────────┬──────────┬──────────────┬────────────┐\n");
+  printf("│ Sales ID │ Item Code │ Item Name           │ Quantity │ Price(PHP) │ Discount │ Total Amount │ Commission │\n");
+  printf("├──────────┼───────────┼─────────────────────┼──────────┼────────────┼──────────┼──────────────┼────────────┤");
 }
