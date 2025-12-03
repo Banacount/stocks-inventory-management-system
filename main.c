@@ -40,6 +40,7 @@ typedef struct {
 int getRandomSeed();
 void decrypt(char *encrypted_text, int seed);
 void encrypt(char *text, int seed);
+bool matchString(const char *text, const char *pattern);
 void getInput(char *output_dest, size_t output_size);
 void getInputHidden(char *output_dest, size_t output_size);
 void getInputValidChars(char *output_dest, size_t output_size);
@@ -53,13 +54,17 @@ void disAssemInv(FILE *file_pointer);
 void addInventory(int item_id);
 int getInvItemWithId(Inventory *item_to_modify, int id_what);
 void deleteInv();
+void searchModeInv(int end_inv);
 void updateInvItem();
 void invUIHead();
 void invUIlist(Inventory inventory);
 void salesUIHead();
 void salesUIlist(Sales sale);
 void salesMenu(char *file_name);
- int foundOne = -1;
+void addSale(char *file_name);
+void updateSale(char *file_name);
+void deleteSale(char *file_name);
+void updateSaleCount(char *file_name, int update_num);
 
 int main(int arg_count, char *args[]){
   UINT oldcon = GetConsoleOutputCP(); SetConsoleOutputCP(CP_UTF8);
@@ -67,12 +72,10 @@ int main(int arg_count, char *args[]){
   if(arg_count >= 2){
     if(strcmp("-register", args[1]) == 0){
       registering();
-      foundOne = 0;
     } else if(strcmp("-login", args[1]) == 0){
       if(arg_count >= 3) login(args[2]);
     } else {
       printf("Argument not found..\n");
-      return foundOne;
     }
   }
 
@@ -93,6 +96,31 @@ int getRandomSeed(){
   srand(time(NULL));
   int min = 2, max = 10;
   return min + (rand() % (max - min + 1));
+}
+
+//Search match method
+bool matchString(const char *text, const char *pattern){
+    // Case-insensitive, partial match
+    if (!text || !pattern) return false;
+    char lowerText[256], lowerPattern[256];
+    int i;
+    // Convert both strings to lowercase
+    for (i = 0; text[i] && i < 255; i++)
+        lowerText[i] = tolower((unsigned char)text[i]);
+    lowerText[i] = '\0';
+    for (i = 0; pattern[i] && i < 255; i++)
+        lowerPattern[i] = tolower((unsigned char)pattern[i]);
+    lowerPattern[i] = '\0';
+    // Check if pattern is contained anywhere in text
+    return strstr(lowerText, lowerPattern) != NULL;
+}
+
+//Cancel method
+int triggerCancel(){
+  printf("Are you sure about this? [ Y ]yes - [ N ]no ");
+  int ch = _getch();
+  if((char)ch == 'y' || (char)ch == 'Y') return 1;
+  return -1;
 }
 
 //Get user input faster lmao
@@ -294,7 +322,7 @@ int getInvItemWithId(Inventory *item_to_modify, int id_what){
       item_to_modify->item_id = temp.item_id;
       strcpy(item_to_modify->item_name, temp.item_name);
       item_to_modify->item_price = temp.item_price;
-      item_to_modify->item_quantity = temp.item_price;
+      item_to_modify->item_quantity = temp.item_quantity;
       item_to_modify->isExist = true;
       foundOne = 0;
       break;
@@ -357,17 +385,70 @@ void updateInvItem(){
         printf("\n");
       }
 
-      fseek(f, sizeof(item)*-1, SEEK_CUR);
+      fseek(f, -(long)sizeof(item), SEEK_CUR);
       fwrite(&item, sizeof(item), 1, f); fclose(f);
       printf("\033[0m");
-      Sleep(1500);
       break;
+    }
+  }
+}
+void searchModeInv(int end_inv){
+  char search[128] = "";
+  int ch;
+
+  FILE *f = fopen(INV_FILE, "rb");
+  if(f == NULL){
+    printf("Error opening file in searchMode().\n");
+    return;
+  }
+
+  while (1){
+    clearScr();
+    invUIHead();
+    Inventory inv;
+    fseek(f, 0, SEEK_SET);
+    char itemIdBuff[8];
+    for(int i = 0; i < end_inv; i++){
+      fread(&inv, sizeof(inv), 1, f);
+      sprintf_s(itemIdBuff, sizeof(itemIdBuff), "%d", inv.item_id);
+      bool inSearch = (matchString(inv.item_name, search)) ||
+                      (matchString(itemIdBuff, search));
+      if(inv.isExist && inSearch){
+        invUIlist(inv);
+      }
+    }
+    printf("└──────────────┴─────────────────────┴───────────────┴───────────────────┘\n\n");
+    printf("SEARCH MODE (type to filter) | Backspace = delete | ENTER/ESC = exit\n");
+    printf("Search: %s", search);
+
+    ch = _getch();
+    // EXIT SEARCH MODE
+    if(ch == 27 || ch == '\r'){
+      fclose(f);
+      printf("\nEnding search mode...\n");
+      return;
+    }
+    // BACKSPACE
+    if(ch == 8){
+      int len = strlen(search);
+      if(len > 0){
+        search[len - 1] = '\0';
+      }
+      continue;
+    }
+    // NORMAL CHAR INPUT
+    if(isprint(ch)){
+      int len = strlen(search);
+      if(len < 127){
+        search[len] = ch;
+        search[len + 1] = '\0';
+      }
     }
   }
 }
 void deleteInv(){
   int id_to_delete; char id_buff[8]; char choose[2];
-  printf("Put the item ID: ");
+  printf("Put the item ID to delete: ");
   getInputOnlyNum(id_buff, sizeof(id_buff));
   printf("\n");
   id_to_delete = atoi(id_buff);
@@ -378,23 +459,24 @@ void deleteInv(){
     return;
   }
 
-  Inventory loop;
+  Inventory loop; bool isFound = false;
   while(fread(&loop, sizeof(loop), 1, f)){
     if(id_to_delete == loop.item_id){
+      isFound = true;
       printf("\033[92m");
       printf("Data found: %d, %s.\n", loop.item_id, loop.item_name);
       printf("[ ] Type '1' if(yes) / '0' if(no)\r[");
       getInputOnlyNum(choose, sizeof(choose));
       if(atoi(choose) == 1){
         loop.isExist = false;
-        fseek(f, sizeof(loop)*-1, SEEK_CUR);
+        fseek(f, -(long)sizeof(loop), SEEK_CUR);
         fwrite(&loop, sizeof(loop), 1, f);
         printf("\nDeleted!\n");
-        Sleep(1000);
         break;
       }
     }
   }
+  if(!isFound) printf("Did not find the inventory data.");
   printf("\033[0m");
   fclose(f);
 }
@@ -419,6 +501,14 @@ void addInventory(int item_id){
   to_add.item_price = atof(priceBuff);
   to_add.item_quantity = atoi(quantBuff);
   to_add.isExist = true;
+
+  //Cancel popup
+  int isCanceled = triggerCancel();
+  if(isCanceled != 1){
+    printf("\033[0m\nCanceled editing sale.");
+    fclose(f);
+    return;
+  }
 
   fwrite(&to_add, sizeof(to_add), 1, f);
   fclose(f);
@@ -451,6 +541,7 @@ void inventoryMenu(){
     printf("[ D ] Delete an item. \n");
     printf("[ A ] Add an item. \n");
     printf("[ U ] Update details of an item. \n");
+    printf("[ S ] Search mode(supports ID, Name). \n");
     printf("[ R ] To refresh. \n");
     printf("[ Esc or Enter ] To exit. \n");
     ch = _getch();
@@ -458,15 +549,19 @@ void inventoryMenu(){
     switch((char)ch){
       case 'd':
         deleteInv();
+        Sleep(1000);
         break;
       case 'a':
         addInventory(end_of_inv);
+        Sleep(1000);
         break;
       case 'u':
         updateInvItem();
+        Sleep(1000);
         break;
       case 's':
-        printf("Search option\n");
+        searchModeInv(end_of_inv);
+        Sleep(1000);
         break;
       case 'r':
         printf("Refresh\n");
@@ -562,10 +657,6 @@ void salesMenu(char *file_name){
       fread(&sale_temp, sizeof(sale_temp), 1, f);
       if(sale_temp.isExist) salesUIlist(sale_temp);
     }
-    Sales test;
-    test.product_code = 0; test.product_quantity = 12;
-    test.product_discount = 10.1; test.item_id = 1;
-    salesUIlist(test);
     printf("└──────────┴───────────┴─────────────────────┴──────────┴────────────┴──────────┴──────────────┴────────────┘\n");
     fclose(f);
 
@@ -580,15 +671,16 @@ void salesMenu(char *file_name){
     if(ch == 27 || ch == 13){ printf("Exiting salamat sa pag gamit!\n"); break; }
     switch((char)ch){
       case 'd':
-        printf("Delete a record frfr");
+        deleteSale(file_name);
+        Sleep(1000);
         break;
       case 'a':
-        printf("Add sale record!\n");
-        clearCh();
+        addSale(file_name);
+        Sleep(1000);
         break;
       case 'u':
-        printf("Update sum record\n");
-        clearCh();
+        updateSale(file_name);
+        Sleep(1000);
         break;
       case 'r':
         printf("Refresh\n");
@@ -620,28 +712,24 @@ int getSaleCount(char *file_name){
   return result;
 }
 void updateSaleCount(char *file_name, int update_num){
-  FILE *f = fopen(file_name, "wb");
+  FILE *f = fopen(file_name, "r+b");
   if(f == NULL){
     printf("Error opening sale file in updateSaleCount().\n");
     return;
   }
-  fseek(f, sizeof(stock), SEEK_CUR);
-  fwrite(&update_num, sizeof(update_num), 1, f);
+  fseek(f, sizeof(stock), SEEK_SET);
+  fwrite(&update_num, sizeof(int), 1, f);
   fclose(f);
 }
 void addSale(char *file_name){
   FILE *f = fopen(file_name, "ab");
-  int total_sales;
   if(f == NULL){
     printf("Error opening sale file in addSale().\n");
     return;
   }
+  int total_sales;
   total_sales = getSaleCount(file_name);
   Sales ap_sale; Inventory item_temp;
-
-  Sales test;
-  test.product_code = 0; test.product_quantity = 12;
-  test.product_discount = 10.1; test.item_id = 1;
 
   char discountBuff[15], quantBuff[8], itemIdBuff[8];
   ap_sale.product_code = total_sales;
@@ -653,13 +741,14 @@ void addSale(char *file_name){
   ap_sale.product_quantity = atoi(quantBuff);
   ap_sale.isExist = true;
 
-  //Determine inventory using ID lol
+  //Determine sale using ID bruh
   printf("\033[92m\n");
   int ch;
   while(1){
-    printf("Enter Item ID: \r");
+    printf("Enter Item ID: ");
     getInputOnlyNum(itemIdBuff, sizeof(itemIdBuff));
     int invIsExist = getInvItemWithId(&item_temp, atoi(itemIdBuff));
+    printf("\r\033[0K");
     if(invIsExist == 0){
       printf("Item exists [%s, %.2f] | Would you like to use this item? [ Y ]yes - [ N ]no ", item_temp.item_name, item_temp.item_price);
       ch = _getch();
@@ -671,10 +760,142 @@ void addSale(char *file_name){
     } else {
         printf("Item does not exist | Would you like to cancel(yes)? Or enter an ID again(no). [ Y ]yes - [ N ]no ");
         ch = _getch();
-        if((char)ch == 'y' || (char)ch == 'Y'){ printf("Canceled adding sale.\n"); fclose(f); return; }
+        if((char)ch == 'y' || (char)ch == 'Y'){ printf("\033[0m\nCanceled adding sale."); fclose(f); return; }
     }
+    printf("\r\033[0K");
   }
 
-  printf("\033[0m");
+  //Cancel popup
+  int isCanceled = triggerCancel();
+  if(isCanceled != 1){
+    printf("\033[0m\nCanceled adding sale.");
+    fclose(f);
+    return;
+  }
+
+  printf("\033[0m\nWriting data...");
+  fwrite(&ap_sale, sizeof(ap_sale), 1, f);
+  fclose(f);
   updateSaleCount(file_name, total_sales+1);
+}
+void updateSale(char *file_name){
+  int chosen_id; char id_buff[8]; char choose[4];
+  printf("Put the Sales ID: ");
+  getInputOnlyNum(id_buff, sizeof(id_buff));
+  chosen_id = atoi(id_buff);
+
+  FILE *f = fopen(file_name, "rb+");
+  if(f == NULL){
+    printf("Error opening file in updateSale().");
+    return;
+  }
+  fseek(f, sizeof(stock)+sizeof(int), SEEK_SET);
+
+  Sales sale_temp;
+  Inventory item;
+  while(fread(&sale_temp, sizeof(sale_temp), 1, f)){
+    if(sale_temp.product_code == chosen_id){
+      getInvItemWithId(&item, sale_temp.item_id);
+      printf("\n\033[92m");
+      printf("Data found: %d, %s.\n", sale_temp.product_code , item.item_name);
+      char quantBuff[8], discountBuff[15], itemIdBuff[8];
+      
+      //Sale quantity update
+      strcpy(choose, ""); printf("[   ] Modify sale quantity (yes/no).\r\033[1C");
+      getInputValidChars(choose, sizeof(choose));
+      if(strcmp(choose, "yes") == 0){
+        printf("\r\033[0K");
+        printf("Change Sale Quantity: ");
+        getInputValidChars(quantBuff, sizeof(quantBuff));
+        if(strlen(quantBuff) > 0) sale_temp.product_quantity = atoi(quantBuff);
+      }
+      printf("\n");
+
+      //Sale discount update
+      printf("[   ] Modify sale discount (yes/no).\r\033[1C");
+      strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
+      if(strcmp(choose, "yes") == 0){
+        printf("\r\033[0K");
+        printf("Change Sale Discount: ");
+        getInputValidChars(discountBuff, sizeof(discountBuff));
+        if(strlen(discountBuff) > 0) sale_temp.product_discount = atof(discountBuff);
+      }
+      printf("\n");
+
+      //Sale id update
+      printf("[   ] Change item (yes/no).\r\033[1C");
+      strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
+      if(strcmp(choose, "yes") == 0){
+        printf("\r\033[0K");
+        int ch; Inventory item_temp;
+        while(1){
+          printf("Enter Item ID: ");
+          getInputOnlyNum(itemIdBuff, sizeof(itemIdBuff));
+          int invIsExist = getInvItemWithId(&item_temp, atoi(itemIdBuff));
+          printf("\r\033[0K");
+          if(invIsExist == 0){
+            printf("Item exists [%s, %.2f] | Would you like to use this item? [ Y ]yes - [ N ]no ", item_temp.item_name, item_temp.item_price);
+            ch = _getch();
+            if((char)ch == 'y' || (char)ch == 'Y'){
+              sale_temp.item_id = item_temp.item_id;
+              break;
+            } 
+          } else {
+              printf("Item does not exist | Would you like to cancel(yes)? Or enter an ID again(no). [ Y ]yes - [ N ]no ");
+              ch = _getch();
+              if((char)ch == 'y' || (char)ch == 'Y'){ printf("\033[0m\nCanceled adding sale."); fclose(f); return; }
+          }
+          printf("\r\033[0K");
+        }
+      }
+      printf("\n");
+   
+      //Cancel popup
+      int isCanceled = triggerCancel();
+      if(isCanceled != 1){
+        printf("\033[0m\nCanceled editing sale.");
+        fclose(f);
+        return;
+      }
+
+      printf("\033[0m\nWriting to file...");
+      fseek(f, -(long)sizeof(sale_temp), SEEK_CUR);
+      fwrite(&sale_temp, sizeof(sale_temp), 1, f); fclose(f);
+      break;
+    }
+  }
+}
+void deleteSale(char *file_name){
+  int id_to_delete; char id_buff[8]; char choose[2];
+  printf("Put the Sale ID to delete: ");
+  getInputOnlyNum(id_buff, sizeof(id_buff));
+  printf("\n");
+  id_to_delete = atoi(id_buff);
+  
+  FILE *f = fopen(file_name, "rb+");
+  if(f == NULL){
+    printf("Error opening file in deleteSale().\n");
+    return;
+  }
+  fseek(f, sizeof(stock)+sizeof(int), SEEK_SET);
+
+  Sales loop; Inventory inv;
+  while(fread(&loop, sizeof(loop), 1, f)){
+    if(id_to_delete == loop.product_code){
+      getInvItemWithId(&inv, loop.item_id);
+      printf("\033[92m");
+      printf("Data found: %d, %s.\n", loop.product_code, inv.item_name);
+      printf("[ ] Type '1' if(yes) / '0' if(no)\r[");
+      getInputOnlyNum(choose, sizeof(choose));
+      if(atoi(choose) == 1){
+        loop.isExist = false;
+        fseek(f, -(long)sizeof(loop), SEEK_CUR);
+        fwrite(&loop, sizeof(loop), 1, f);
+        printf("\nDeleted!\n");
+        break;
+      }
+    }
+  }
+  printf("\033[0m");
+  fclose(f);
 }
