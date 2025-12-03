@@ -18,7 +18,8 @@ to register:
 main -register
 ```
 Then a menu will pop up then you can fill that up 
-with your desired information. *Warning:* clicking 
+with your desired information.This will create a
+".stock" file and you can use that to login. *Warning:* clicking 
 the Esc/Enter key will finish the input process. 
 
 ## Loging in
