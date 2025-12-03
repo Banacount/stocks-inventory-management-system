@@ -64,6 +64,7 @@ void salesMenu(char *file_name);
 void addSale(char *file_name);
 void updateSale(char *file_name);
 void deleteSale(char *file_name);
+void searchModeSale(char *file_name);
 void updateSaleCount(char *file_name, int update_num);
 
 int main(int arg_count, char *args[]){
@@ -398,7 +399,7 @@ void searchModeInv(int end_inv){
 
   FILE *f = fopen(INV_FILE, "rb");
   if(f == NULL){
-    printf("Error opening file in searchMode().\n");
+    printf("Error opening file in searchModeInv().\n");
     return;
   }
 
@@ -503,6 +504,7 @@ void addInventory(int item_id){
   to_add.isExist = true;
 
   //Cancel popup
+  printf("\n");
   int isCanceled = triggerCancel();
   if(isCanceled != 1){
     printf("\033[0m\nCanceled editing sale.");
@@ -614,7 +616,7 @@ void salesUIlist(Sales sale){
 
   //Calculations
   sale.product_price = item.item_price;
-  sale.total_value = (sale.product_quantity * sale.product_price) - sale.product_discount;//
+  sale.total_value = (sale.product_quantity * sale.product_price) - sale.product_discount;
   sale.commission_total = sale.total_value * main_commission;
   strcpy(sale.product_name, item.item_name);
 
@@ -624,7 +626,7 @@ void salesUIlist(Sales sale){
   printf("\r\033[13C");
   sprintf_s(itemCodeBuff, sizeof(itemCodeBuff), "%d", item.item_id); printf("%s", itemCodeBuff);
   printf("\r\033[25C");
-  sprintf_s(itemNameBuff, sizeof(itemNameBuff), "%s", sale.product_name); printf("%s", itemNameBuff);
+  sprintf_s(itemNameBuff, sizeof(itemNameBuff), "%.19s", sale.product_name); printf("%s", itemNameBuff);
   printf("\r\033[47C");
   sprintf_s(quanBuff, sizeof(quanBuff), "%d", sale.product_quantity); printf("%s", quanBuff);
   printf("\r\033[58C");
@@ -664,6 +666,7 @@ void salesMenu(char *file_name){
     printf("[ D ] Delete an sale record. \n");
     printf("[ A ] Add an sale record. \n");
     printf("[ U ] Update details of an sale record. \n");
+    printf("[ S ] Search mode supports(Name, ID, Discount)\n");
     printf("[ I ] Go to inventory. \n");
     printf("[ R ] To refresh. \n");
     printf("[ Esc or Enter ] To exit. \n");
@@ -680,6 +683,10 @@ void salesMenu(char *file_name){
         break;
       case 'u':
         updateSale(file_name);
+        Sleep(1000);
+        break;
+      case 's':
+        searchModeSale(file_name);
         Sleep(1000);
         break;
       case 'r':
@@ -898,4 +905,59 @@ void deleteSale(char *file_name){
   }
   printf("\033[0m");
   fclose(f);
+}
+void searchModeSale(char *file_name){
+  char search[128] = "";
+  int ch;
+
+  FILE *f = fopen(file_name, "rb");
+  if(f == NULL){
+    printf("Error opening file in searchModeSale().\n");
+    return;
+  }
+
+  while (1){
+    clearScr();
+    salesUIHead();
+    fseek(f, sizeof(stock)+sizeof(int), SEEK_SET);
+    Sales sl; Inventory inv;
+    char codeIdBuff[8], discountBuff[14];
+    while(fread(&sl, sizeof(sl), 1, f)){
+      getInvItemWithId(&inv, sl.item_id);
+      sprintf_s(codeIdBuff, sizeof(codeIdBuff), "%d", sl.product_code);
+      sprintf_s(discountBuff, sizeof(discountBuff), "%.2f", sl.product_discount);
+      bool inSearch = (matchString(inv.item_name, search)) ||
+                      (matchString(codeIdBuff, search)) || matchString(discountBuff, search);
+      if(sl.isExist && inSearch){
+        salesUIlist(sl);
+      }
+    }
+    printf("└──────────┴───────────┴─────────────────────┴──────────┴────────────┴──────────┴──────────────┴────────────┘\n");
+    printf("SEARCH MODE (type to filter) |  [ ENTER/ESC ] = exit\n");
+    printf("Search: %s", search);
+
+    ch = _getch();
+    // EXIT SEARCH MODE
+    if(ch == 27 || ch == '\r'){
+      fclose(f);
+      printf("\nEnding search mode...\n");
+      return;
+    }
+    // BACKSPACE
+    if(ch == 8){
+      int len = strlen(search);
+      if(len > 0){
+        search[len - 1] = '\0';
+      }
+      continue;
+    }
+    // NORMAL CHAR INPUT
+    if(isprint(ch)){
+      int len = strlen(search);
+      if(len < 127){
+        search[len] = ch;
+        search[len + 1] = '\0';
+      }
+    }
+  }
 }
