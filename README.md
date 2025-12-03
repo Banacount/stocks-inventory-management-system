@@ -27,7 +27,7 @@ the Esc/Enter key will finish the input process.
 login and open the menu. Make sure you have
 the password and username remembered.
 Then enter the file name of the *.stock* account on the arguments
-of -register. No need to include the file extension.  
+of -login. No need to include the file extension.  
 Example of logging in with "test.stock" file:
 ### Powershell
 ```
