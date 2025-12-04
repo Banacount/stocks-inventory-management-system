@@ -56,10 +56,11 @@ int getInvItemWithId(Inventory *item_to_modify, int id_what);
 void deleteInv();
 void searchModeInv(int end_inv);
 void updateInvItem();
+void ustpHeader();
 void invUIHead();
 void invUIlist(Inventory inventory);
 void salesUIHead();
-void salesUIlist(Sales sale);
+void salesUIlist(Sales *sale);
 void salesMenu(char *file_name);
 void addSale(char *file_name);
 void updateSale(char *file_name);
@@ -308,12 +309,20 @@ void encrypt(char *text, int seed){
   }
 }
 
+//Ustp frfr
+void ustpHeader(){
+  printf("┌──────────────────────────────┬───────────────────────────────────────────┬───────┬─────────────────────────┐\n");
+  printf("│                                                                                                            │\r");
+  printf("│ USTP STOCKS INVENTORY SYSTEM │ Made by: VALMORIA, JOHN RUSHELL P.        │ IT1R1 │ Started on: 11/25/2025 \n");
+  printf("└──────────────────────────────┴───────────────────────────────────────────┴───────┴─────────────────────────┘\n");
+}
+
 //Inventory methods
 int getInvItemWithId(Inventory *item_to_modify, int id_what){
   checkInvFile();
   FILE *f = fopen(INV_FILE, "rb");
   if(f == NULL){
-    printf("Error in opening inventory file.\n");
+    printf("Error in opening in getInvItemWithId().\n");
     return -1;
   }
 
@@ -334,63 +343,68 @@ int getInvItemWithId(Inventory *item_to_modify, int id_what){
 }
 void updateInvItem(){
   int chosen_id; char id_buff[8]; char choose[4];
-  printf("Put the item ID: ");
+  printf("\033[92mPut the item ID: ");
   getInputOnlyNum(id_buff, sizeof(id_buff));
   chosen_id = atoi(id_buff);
 
   FILE *f = fopen(INV_FILE, "rb+");
   if(f == NULL){
-    printf("Error opening file.");
+    printf("Error opening file in updateInvItem().");
     return;
   }
 
-  Inventory item;
+  Inventory item; bool founded = false;
   while(fread(&item, sizeof(item), 1, f)){
     if(item.item_id == chosen_id){
-      printf("\n\033[92m");
+      founded = true;
+      printf("\n");
       printf("Data found: %d, %s.\n", item.item_id, item.item_name);
       char quantBuff[8], priceBuff[15];
       
       //Item name update
       printf("[   ] Modify item name (yes/no).\r\033[1C");
       strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
-      printf("\033[1B\r");
       if(strcmp(choose, "yes") == 0){
-        printf("\033[1A\r\033[0K");
+        printf("\r\033[0K");
         printf("Change Item Name: ");
         getInputValidChars(item.item_name, sizeof(item.item_name));
-        printf("\n");
       }
+      printf("\n");
 
       //Item quantity update
       strcpy(choose, ""); printf("[   ] Modify item quantity (yes/no).\r\033[1C");
       getInputValidChars(choose, sizeof(choose));
-      printf("\033[1B\r");
       if(strcmp(choose, "yes") == 0){
-        printf("\033[1A\r\033[0K");
+        printf("\r\033[0K");
         printf("Change Item Quantity: ");
         getInputValidChars(quantBuff, sizeof(quantBuff));
         if(strlen(quantBuff) > 0) item.item_quantity = atoi(quantBuff);
-        printf("\n");
       }
+      printf("\n");
 
       //Item price update
       printf("[   ] Modify item price (yes/no).\r\033[1C");
       strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
-      printf("\033[1B\r");
       if(strcmp(choose, "yes") == 0){
-        printf("\033[1A\r\033[0K");
+        printf("\r\033[0K");
         printf("Change Item Price: ");
         getInputValidChars(priceBuff, sizeof(priceBuff));
         if(strlen(priceBuff) > 0) item.item_price = atof(priceBuff);
-        printf("\n");
       }
+      printf("\n");
+      item.isExist = true;
 
       fseek(f, -(long)sizeof(item), SEEK_CUR);
       fwrite(&item, sizeof(item), 1, f); fclose(f);
       printf("\033[0m");
       break;
     }
+  }
+
+  if(!founded){
+    printf("\nDid not find the item.\n");
+    fclose(f);
+    printf("\033[0m");
   }
 }
 void searchModeInv(int end_inv){
@@ -418,8 +432,8 @@ void searchModeInv(int end_inv){
         invUIlist(inv);
       }
     }
-    printf("└──────────────┴─────────────────────┴───────────────┴───────────────────┘\n\n");
-    printf("SEARCH MODE (type to filter) | Backspace = delete | ENTER/ESC = exit\n");
+    printf("└──────────────┴───────────────────────────────┴───────────────┴───────────────────┘\n\n");
+    printf("SEARCH MODE (type to filter) | ENTER/ESC = exit\n");
     printf("Search: %s", search);
 
     ch = _getch();
@@ -449,14 +463,14 @@ void searchModeInv(int end_inv){
 }
 void deleteInv(){
   int id_to_delete; char id_buff[8]; char choose[2];
-  printf("Put the item ID to delete: ");
+  printf("\033[92mPut the item ID to delete: ");
   getInputOnlyNum(id_buff, sizeof(id_buff));
   printf("\n");
   id_to_delete = atoi(id_buff);
   
   FILE *f = fopen(INV_FILE, "rb+");
   if(f == NULL){
-    printf("Error opening file.\n");
+    printf("Error opening file in deleteInv().\n");
     return;
   }
 
@@ -464,7 +478,6 @@ void deleteInv(){
   while(fread(&loop, sizeof(loop), 1, f)){
     if(id_to_delete == loop.item_id){
       isFound = true;
-      printf("\033[92m");
       printf("Data found: %d, %s.\n", loop.item_id, loop.item_name);
       printf("[ ] Type '1' if(yes) / '0' if(no)\r[");
       getInputOnlyNum(choose, sizeof(choose));
@@ -493,11 +506,11 @@ void addInventory(int item_id){
 
   char priceBuff[15], quantBuff[8];
   to_add.item_id = item_id;
-  printf("\033[92mEnter Item Name: \033[0m");
+  printf("\033[92mEnter Item Name: ");
   getInputValidChars(to_add.item_name, sizeof(to_add.item_name));
-  printf("\033[92m\nEnter Item Quantity: \033[0m");
+  printf("\033[92m\nEnter Item Quantity: ");
   getInputOnlyNum(quantBuff, sizeof(quantBuff));
-  printf("\033[92m\nEnter Item Price: \033[0m");
+  printf("\033[92m\nEnter Item Price: ");
   getInputOnlyNum(priceBuff, sizeof(priceBuff));
   to_add.item_price = atof(priceBuff);
   to_add.item_quantity = atoi(quantBuff);
@@ -512,12 +525,14 @@ void addInventory(int item_id){
     return;
   }
 
+  printf("\033[0m");
+  printf("\nWriting to file...");
   fwrite(&to_add, sizeof(to_add), 1, f);
   fclose(f);
 }
 //Inventory creation menu
 void inventoryMenu(){
-  int sale_count, end_of_inv;
+  int sale_count, end_of_inv, count;
   Inventory inv;
   int ch;
   while(1){
@@ -526,20 +541,23 @@ void inventoryMenu(){
     invUIHead();
     checkInvFile();
     //Get the inv count
-    end_of_inv = 0;
+    end_of_inv = 0; count = 0;
     FILE *f = fopen(INV_FILE, "rb");
-    if(f == NULL){ printf("Error opening file.\n"); return; }
+    if(f == NULL){ printf("Error opening file in inventoryMenu().\n"); return; }
     while(fread(&inv, sizeof(inv), 1, f)) end_of_inv++;
 
     fseek(f, 0, SEEK_SET);
     for(int i = 0; i < end_of_inv; i++){
       fread(&inv, sizeof(inv), 1, f);
-      if(inv.isExist) invUIlist(inv);
+      if(inv.isExist){
+        invUIlist(inv);
+        count++;
+      }
     }
-    printf("└──────────────┴─────────────────────┴───────────────┴───────────────────┘\n\n");
+    printf("└──────────────┴───────────────────────────────┴───────────────┴───────────────────┘\n\n");
     fclose(f);
     
-    printf("Total Items [ %d ]\n", end_of_inv);
+    printf("Total Items [ %d ]\n", count);
     printf("[ D ] Delete an item. \n");
     printf("[ A ] Add an item. \n");
     printf("[ U ] Update details of an item. \n");
@@ -547,23 +565,24 @@ void inventoryMenu(){
     printf("[ R ] To refresh. \n");
     printf("[ Esc or Enter ] To exit. \n");
     ch = _getch();
+    int methodDelay = 1200;
     if(ch == 27 || ch == 13){ printf("Exiting inventory menu.\n"); break; }
     switch((char)ch){
       case 'd':
         deleteInv();
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 'a':
         addInventory(end_of_inv);
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 'u':
         updateInvItem();
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 's':
         searchModeInv(end_of_inv);
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 'r':
         printf("Refresh\n");
@@ -578,25 +597,25 @@ void inventoryMenu(){
   }
 }
 void invUIHead(){
-  printf("┌──────────────┬─────────────────────┬───────────────┬───────────────────┐\n");
-  printf("│ Item Code    │ Item Name           │ Item Quantity │ Item Price        │\n");
-  printf("├──────────────┼─────────────────────┼───────────────┼───────────────────┤\n");
+  printf("┌──────────────┬───────────────────────────────┬───────────────┬───────────────────┐\n");
+  printf("│ Item Code    │ Item Name                     │ Item Quantity │ Item Price        │\n");
+  printf("├──────────────┼───────────────────────────────┼───────────────┼───────────────────┤\n");
 };
 void invUIlist(Inventory inventory){
   //Buffers
   char id[13], quan[14], price[18];
 
-  printf("│              │                     │               │                   │");
+  printf("│              │                               │               │                   │");
   printf("\r\033[2C");
   sprintf_s(id, sizeof(id), "%d", inventory.item_id); printf("%s", id);
   printf("\r\033[17C");
-  printf("%.19s", inventory.item_name);
-  printf("\r\033[39C");
+  printf("%.29s", inventory.item_name);
+  printf("\r\033[49C");
   sprintf_s(quan, sizeof(quan), "%d", inventory.item_quantity); printf("%s", quan);
-  printf("\r\033[56C");
+  printf("\r\033[66C");
   sprintf_s(price, sizeof(price), "%.2f", inventory.item_price); printf("%s", price);
   printf("\033[1B\r");
-  printf("├──────────────┼─────────────────────┼───────────────┼───────────────────┤");
+  printf("├──────────────┼───────────────────────────────┼───────────────┼───────────────────┤");
   printf("\033[1B\r");
 }
 
@@ -606,45 +625,49 @@ void salesUIHead(){
   printf("│ Sales ID │ Item Code │ Item Name           │ Quantity │ Price(PHP) │ Discount │ Total Amount │ Commission │\n");
   printf("├──────────┼───────────┼─────────────────────┼──────────┼────────────┼──────────┼──────────────┼────────────┤\n");
 }
-void salesUIlist(Sales sale){
+void salesUIlist(Sales *sale){
   Inventory item;
   item.isExist = false;
-  getInvItemWithId(&item, sale.item_id);
+  getInvItemWithId(&item, sale->item_id);
   if(!item.isExist) return;
   char salesIdBuff[9], itemCodeBuff[10], itemNameBuff[20], quanBuff[9];
   char priceBuff[11], discountBuff[9], totalBuff[13], comBuff[11];
 
   //Calculations
-  sale.product_price = item.item_price;
-  sale.total_value = (sale.product_quantity * sale.product_price) - sale.product_discount;
-  sale.commission_total = sale.total_value * main_commission;
-  strcpy(sale.product_name, item.item_name);
+  sale->product_price = item.item_price;
+  sale->total_value = (sale->product_quantity * sale->product_price) - sale->product_discount;
+  sale->commission_total = sale->total_value * main_commission;
+  strcpy(sale->product_name, item.item_name);
 
   printf("│          │           │                     │          │            │          │              │            │");
   printf("\r\033[2C");
-  sprintf_s(salesIdBuff, sizeof(salesIdBuff), "%d", sale.product_code); printf("%s", salesIdBuff);
+  sprintf_s(salesIdBuff, sizeof(salesIdBuff), "%d", sale->product_code); printf("%s", salesIdBuff);
   printf("\r\033[13C");
   sprintf_s(itemCodeBuff, sizeof(itemCodeBuff), "%d", item.item_id); printf("%s", itemCodeBuff);
   printf("\r\033[25C");
-  sprintf_s(itemNameBuff, sizeof(itemNameBuff), "%.19s", sale.product_name); printf("%s", itemNameBuff);
+  sprintf_s(itemNameBuff, sizeof(itemNameBuff), "%.19s", sale->product_name); printf("%s", itemNameBuff);
   printf("\r\033[47C");
-  sprintf_s(quanBuff, sizeof(quanBuff), "%d", sale.product_quantity); printf("%s", quanBuff);
+  sprintf_s(quanBuff, sizeof(quanBuff), "%d", sale->product_quantity); printf("%s", quanBuff);
   printf("\r\033[58C");
-  sprintf_s(priceBuff, sizeof(priceBuff), "%.2f", sale.product_price); printf("%s", priceBuff);
+  sprintf_s(priceBuff, sizeof(priceBuff), "%.2f", sale->product_price); printf("%s", priceBuff);
   printf("\r\033[71C");
-  sprintf_s(discountBuff, sizeof(discountBuff), "%.2f", sale.product_discount); printf("%s", discountBuff);
+  sprintf_s(discountBuff, sizeof(discountBuff), "%.2f", sale->product_discount); printf("%s", discountBuff);
   printf("\r\033[82C");
-  sprintf_s(totalBuff, sizeof(totalBuff), "%.2f", sale.total_value); printf("%s", totalBuff);
+  sprintf_s(totalBuff, sizeof(totalBuff), "%.2f", sale->total_value); printf("%s", totalBuff);
   printf("\r\033[97C");
-  sprintf_s(comBuff, sizeof(comBuff), "%.2f", sale.commission_total); printf("%s", comBuff);
+  sprintf_s(comBuff, sizeof(comBuff), "%.2f", sale->commission_total); printf("%s", comBuff);
   printf("\r\033[1B");
   printf("├──────────┼───────────┼─────────────────────┼──────────┼────────────┼──────────┼──────────────┼────────────┤\n");
 }
 void salesMenu(char *file_name){
-  int ch, total_sales;
+  int ch, total_sales, count;
+  float grand_total;
   while(1){
     clearScr();
+    checkInvFile();
+    ustpHeader();
     salesUIHead();
+    grand_total = 0.00; count = 0;
 
     //Open file frfr
     FILE *f = fopen(file_name, "rb");
@@ -657,12 +680,22 @@ void salesMenu(char *file_name){
     Sales sale_temp;
     for(int i = 0; i < total_sales; i++){
       fread(&sale_temp, sizeof(sale_temp), 1, f);
-      if(sale_temp.isExist) salesUIlist(sale_temp);
+      if(sale_temp.isExist){
+        count++;
+        salesUIlist(&sale_temp);
+        grand_total += sale_temp.total_value;
+        grand_total += sale_temp.commission_total;
+      }
     }
-    printf("└──────────┴───────────┴─────────────────────┴──────────┴────────────┴──────────┴──────────────┴────────────┘\n");
+    //Grand total
+    printf("├──────────┴───────────┴─────────────────────┴──────────┴────────────┴──────────┴──────────────┴────────────┤\n");
+    printf("│                                                                                                           │\n");
+    printf("└───────────────────────────────────────────────────────────────────────────────────────────────────────────┘");
+    printf("\r\033[1A\033[2C");
+    printf("Grand Total: %f\n\n", grand_total);
     fclose(f);
 
-    printf("\nTotal Items [ %d ]\n", total_sales);
+    printf("\nTotal Items [ %d ]\n", count);
     printf("[ D ] Delete an sale record. \n");
     printf("[ A ] Add an sale record. \n");
     printf("[ U ] Update details of an sale record. \n");
@@ -671,23 +704,24 @@ void salesMenu(char *file_name){
     printf("[ R ] To refresh. \n");
     printf("[ Esc or Enter ] To exit. \n");
     ch = _getch();
+    int methodDelay = 1300;
     if(ch == 27 || ch == 13){ printf("Exiting salamat sa pag gamit!\n"); break; }
     switch((char)ch){
       case 'd':
         deleteSale(file_name);
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 'a':
         addSale(file_name);
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 'u':
         updateSale(file_name);
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 's':
         searchModeSale(file_name);
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       case 'r':
         printf("Refresh\n");
@@ -695,7 +729,7 @@ void salesMenu(char *file_name){
         break;
       case 'i':
         inventoryMenu();
-        Sleep(1000);
+        Sleep(methodDelay);
         break;
       default:
         printf("Invalid choice\n");
@@ -734,22 +768,14 @@ void addSale(char *file_name){
     printf("Error opening sale file in addSale().\n");
     return;
   }
+  printf("\033[92m");
   int total_sales;
   total_sales = getSaleCount(file_name);
   Sales ap_sale; Inventory item_temp;
 
   char discountBuff[15], quantBuff[8], itemIdBuff[8];
-  ap_sale.product_code = total_sales;
-  printf("\033[92m\nEnter Sale Quantity: \033[0m");
-  getInputOnlyNum(quantBuff, sizeof(quantBuff));
-  printf("\033[92m\nEnter Sale Discount: \033[0m");
-  getInputOnlyNum(discountBuff, sizeof(discountBuff));
-  ap_sale.product_discount = atof(discountBuff);
-  ap_sale.product_quantity = atoi(quantBuff);
-  ap_sale.isExist = true;
 
   //Determine sale using ID bruh
-  printf("\033[92m\n");
   int ch;
   while(1){
     printf("Enter Item ID: ");
@@ -771,8 +797,17 @@ void addSale(char *file_name){
     }
     printf("\r\033[0K");
   }
+  ap_sale.product_code = total_sales;
+  printf("Enter Sale Quantity: ");
+  getInputOnlyNum(quantBuff, sizeof(quantBuff));
+  printf("\nEnter Sale Discount: ");
+  getInputOnlyNum(discountBuff, sizeof(discountBuff));
+  ap_sale.product_discount = atof(discountBuff);
+  ap_sale.product_quantity = atoi(quantBuff);
+  ap_sale.isExist = true;
 
   //Cancel popup
+  printf("\n");
   int isCanceled = triggerCancel();
   if(isCanceled != 1){
     printf("\033[0m\nCanceled adding sale.");
@@ -780,14 +815,14 @@ void addSale(char *file_name){
     return;
   }
 
-  printf("\033[0m\nWriting data...");
+  printf("\nWriting data...\033[0m");
   fwrite(&ap_sale, sizeof(ap_sale), 1, f);
   fclose(f);
   updateSaleCount(file_name, total_sales+1);
 }
 void updateSale(char *file_name){
   int chosen_id; char id_buff[8]; char choose[4];
-  printf("Put the Sales ID: ");
+  printf("\033[92mPut the Sales ID: ");
   getInputOnlyNum(id_buff, sizeof(id_buff));
   chosen_id = atoi(id_buff);
 
@@ -799,36 +834,14 @@ void updateSale(char *file_name){
   fseek(f, sizeof(stock)+sizeof(int), SEEK_SET);
 
   Sales sale_temp;
-  Inventory item;
+  Inventory item; bool founded = false;
   while(fread(&sale_temp, sizeof(sale_temp), 1, f)){
     if(sale_temp.product_code == chosen_id){
+      founded = true;
       getInvItemWithId(&item, sale_temp.item_id);
-      printf("\n\033[92m");
-      printf("Data found: %d, %s.\n", sale_temp.product_code , item.item_name);
+      printf("\nData found: %d, %s.\n", sale_temp.product_code , item.item_name);
       char quantBuff[8], discountBuff[15], itemIdBuff[8];
       
-      //Sale quantity update
-      strcpy(choose, ""); printf("[   ] Modify sale quantity (yes/no).\r\033[1C");
-      getInputValidChars(choose, sizeof(choose));
-      if(strcmp(choose, "yes") == 0){
-        printf("\r\033[0K");
-        printf("Change Sale Quantity: ");
-        getInputValidChars(quantBuff, sizeof(quantBuff));
-        if(strlen(quantBuff) > 0) sale_temp.product_quantity = atoi(quantBuff);
-      }
-      printf("\n");
-
-      //Sale discount update
-      printf("[   ] Modify sale discount (yes/no).\r\033[1C");
-      strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
-      if(strcmp(choose, "yes") == 0){
-        printf("\r\033[0K");
-        printf("Change Sale Discount: ");
-        getInputValidChars(discountBuff, sizeof(discountBuff));
-        if(strlen(discountBuff) > 0) sale_temp.product_discount = atof(discountBuff);
-      }
-      printf("\n");
-
       //Sale id update
       printf("[   ] Change item (yes/no).\r\033[1C");
       strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
@@ -856,6 +869,29 @@ void updateSale(char *file_name){
         }
       }
       printf("\n");
+
+      //Sale quantity update
+      strcpy(choose, ""); printf("[   ] Modify sale quantity (yes/no).\r\033[1C");
+      getInputValidChars(choose, sizeof(choose));
+      if(strcmp(choose, "yes") == 0){
+        printf("\r\033[0K");
+        printf("Change Sale Quantity: ");
+        getInputValidChars(quantBuff, sizeof(quantBuff));
+        if(strlen(quantBuff) > 0) sale_temp.product_quantity = atoi(quantBuff);
+      }
+      printf("\n");
+
+      //Sale discount update
+      printf("[   ] Modify sale discount (yes/no).\r\033[1C");
+      strcpy(choose, ""); getInputValidChars(choose, sizeof(choose));
+      if(strcmp(choose, "yes") == 0){
+        printf("\r\033[0K");
+        printf("Change Sale Discount: ");
+        getInputValidChars(discountBuff, sizeof(discountBuff));
+        if(strlen(discountBuff) > 0) sale_temp.product_discount = atof(discountBuff);
+      }
+      printf("\n");
+      sale_temp.isExist = true;
    
       //Cancel popup
       int isCanceled = triggerCancel();
@@ -865,16 +901,22 @@ void updateSale(char *file_name){
         return;
       }
 
-      printf("\033[0m\nWriting to file...");
+      printf("\nWriting to file...\033[0m");
       fseek(f, -(long)sizeof(sale_temp), SEEK_CUR);
       fwrite(&sale_temp, sizeof(sale_temp), 1, f); fclose(f);
       break;
     }
   }
+
+  if(!founded){
+    printf("\nDid not find the item.\n");
+    fclose(f);
+    printf("\033[0m");
+  }
 }
 void deleteSale(char *file_name){
   int id_to_delete; char id_buff[8]; char choose[2];
-  printf("Put the Sale ID to delete: ");
+  printf("\033[92mPut the Sale ID to delete: ");
   getInputOnlyNum(id_buff, sizeof(id_buff));
   printf("\n");
   id_to_delete = atoi(id_buff);
@@ -887,10 +929,11 @@ void deleteSale(char *file_name){
   fseek(f, sizeof(stock)+sizeof(int), SEEK_SET);
 
   Sales loop; Inventory inv;
+  bool founded = false;
   while(fread(&loop, sizeof(loop), 1, f)){
     if(id_to_delete == loop.product_code){
+      founded = true;
       getInvItemWithId(&inv, loop.item_id);
-      printf("\033[92m");
       printf("Data found: %d, %s.\n", loop.product_code, inv.item_name);
       printf("[ ] Type '1' if(yes) / '0' if(no)\r[");
       getInputOnlyNum(choose, sizeof(choose));
@@ -900,8 +943,14 @@ void deleteSale(char *file_name){
         fwrite(&loop, sizeof(loop), 1, f);
         printf("\nDeleted!\n");
         break;
+      } else {
+        printf("\nCanceled delete process.\n");
+        break;
       }
     }
+  }
+  if(!founded){
+    printf("Did not found the data.\n");
   }
   printf("\033[0m");
   fclose(f);
@@ -929,7 +978,7 @@ void searchModeSale(char *file_name){
       bool inSearch = (matchString(inv.item_name, search)) ||
                       (matchString(codeIdBuff, search)) || matchString(discountBuff, search);
       if(sl.isExist && inSearch){
-        salesUIlist(sl);
+        salesUIlist(&sl);
       }
     }
     printf("└──────────┴───────────┴─────────────────────┴──────────┴────────────┴──────────┴──────────────┴────────────┘\n");
