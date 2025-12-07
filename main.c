@@ -497,7 +497,7 @@ void deleteInv(){
 void addInventory(int item_id){
   FILE *f = fopen(INV_FILE, "ab");
   if(f == NULL){
-    printf("Error opening file.\n");
+    printf("Error opening file in addInventory().\n");
     return;
   }
 
@@ -508,9 +508,9 @@ void addInventory(int item_id){
   to_add.item_id = item_id;
   printf("\033[92mEnter Item Name: ");
   getInputValidChars(to_add.item_name, sizeof(to_add.item_name));
-  printf("\033[92m\nEnter Item Quantity: ");
+  printf("\nEnter Item Quantity: ");
   getInputOnlyNum(quantBuff, sizeof(quantBuff));
-  printf("\033[92m\nEnter Item Price: ");
+  printf("\nEnter Item Price: ");
   getInputOnlyNum(priceBuff, sizeof(priceBuff));
   to_add.item_price = atof(priceBuff);
   to_add.item_quantity = atoi(quantBuff);
@@ -520,13 +520,12 @@ void addInventory(int item_id){
   printf("\n");
   int isCanceled = triggerCancel();
   if(isCanceled != 1){
-    printf("\033[0m\nCanceled editing sale.");
+    printf("\nCanceled editing sale.\033[0m");
     fclose(f);
     return;
   }
 
-  printf("\033[0m");
-  printf("\nWriting to file...");
+  printf("\nWriting to file...\033[0m");
   fwrite(&to_add, sizeof(to_add), 1, f);
   fclose(f);
 }
@@ -793,7 +792,7 @@ void addSale(char *file_name){
     } else {
         printf("Item does not exist | Would you like to cancel(yes)? Or enter an ID again(no). [ Y ]yes - [ N ]no ");
         ch = _getch();
-        if((char)ch == 'y' || (char)ch == 'Y'){ printf("\033[0m\nCanceled adding sale."); fclose(f); return; }
+        if((char)ch == 'y' || (char)ch == 'Y'){ printf("\nCanceled adding sale.\033[0m"); fclose(f); return; }
     }
     printf("\r\033[0K");
   }
@@ -810,7 +809,7 @@ void addSale(char *file_name){
   printf("\n");
   int isCanceled = triggerCancel();
   if(isCanceled != 1){
-    printf("\033[0m\nCanceled adding sale.");
+    printf("\nCanceled adding sale.\033[0m");
     fclose(f);
     return;
   }
@@ -863,7 +862,7 @@ void updateSale(char *file_name){
           } else {
               printf("Item does not exist | Would you like to cancel(yes)? Or enter an ID again(no). [ Y ]yes - [ N ]no ");
               ch = _getch();
-              if((char)ch == 'y' || (char)ch == 'Y'){ printf("\033[0m\nCanceled adding sale."); fclose(f); return; }
+              if((char)ch == 'y' || (char)ch == 'Y'){ printf("\nCanceled adding sale.\033[0m"); fclose(f); return; }
           }
           printf("\r\033[0K");
         }
@@ -896,7 +895,7 @@ void updateSale(char *file_name){
       //Cancel popup
       int isCanceled = triggerCancel();
       if(isCanceled != 1){
-        printf("\033[0m\nCanceled editing sale.");
+        printf("\nCanceled editing sale.\033[0m");
         fclose(f);
         return;
       }
