@@ -546,6 +546,7 @@ void inventoryMenu(){
     while(fread(&inv, sizeof(inv), 1, f)) end_of_inv++;
 
     fseek(f, 0, SEEK_SET);
+    printf("\033[92m");
     for(int i = 0; i < end_of_inv; i++){
       fread(&inv, sizeof(inv), 1, f);
       if(inv.isExist){
@@ -554,6 +555,7 @@ void inventoryMenu(){
       }
     }
     printf("└──────────────┴───────────────────────────────┴───────────────┴───────────────────┘\n\n");
+    printf("\033[0m");
     fclose(f);
     
     printf("Total Items [ %d ]\n", count);
@@ -596,9 +598,11 @@ void inventoryMenu(){
   }
 }
 void invUIHead(){
+  printf("\033[96m");
   printf("┌──────────────┬───────────────────────────────┬───────────────┬───────────────────┐\n");
   printf("│ Item Code    │ Item Name                     │ Item Quantity │ Item Price        │\n");
   printf("├──────────────┼───────────────────────────────┼───────────────┼───────────────────┤\n");
+  printf("\033[0m");
 };
 void invUIlist(Inventory inventory){
   //Buffers
@@ -606,6 +610,7 @@ void invUIlist(Inventory inventory){
 
   printf("│              │                               │               │                   │");
   printf("\r\033[2C");
+  printf("\033[93m");
   sprintf_s(id, sizeof(id), "%d", inventory.item_id); printf("%s", id);
   printf("\r\033[17C");
   printf("%.29s", inventory.item_name);
@@ -613,16 +618,19 @@ void invUIlist(Inventory inventory){
   sprintf_s(quan, sizeof(quan), "%d", inventory.item_quantity); printf("%s", quan);
   printf("\r\033[66C");
   sprintf_s(price, sizeof(price), "%.2f", inventory.item_price); printf("%s", price);
-  printf("\033[1B\r");
-  printf("├──────────────┼───────────────────────────────┼───────────────┼───────────────────┤");
+  printf("\033[92m");
+  //printf("\033[1B\r");
+  //printf("├──────────────┼───────────────────────────────┼───────────────┼───────────────────┤");
   printf("\033[1B\r");
 }
 
 //Sales type shit
 void salesUIHead(){
+  printf("\033[96m");
   printf("┌──────────┬───────────┬─────────────────────┬──────────┬────────────┬──────────┬──────────────┬────────────┐\n");
   printf("│ Sales ID │ Item Code │ Item Name           │ Quantity │ Price(PHP) │ Discount │ Total Amount │ Commission │\n");
   printf("├──────────┼───────────┼─────────────────────┼──────────┼────────────┼──────────┼──────────────┼────────────┤\n");
+  printf("\033[0m");
 }
 void salesUIlist(Sales *sale){
   Inventory item;
@@ -639,15 +647,20 @@ void salesUIlist(Sales *sale){
   strcpy(sale->product_name, item.item_name);
 
   printf("│          │           │                     │          │            │          │              │            │");
+  printf("\033[92m");
   printf("\r\033[2C");
   sprintf_s(salesIdBuff, sizeof(salesIdBuff), "%d", sale->product_code); printf("%s", salesIdBuff);
   printf("\r\033[13C");
   sprintf_s(itemCodeBuff, sizeof(itemCodeBuff), "%d", item.item_id); printf("%s", itemCodeBuff);
   printf("\r\033[25C");
+  printf("\033[30;48;5;82m");
   sprintf_s(itemNameBuff, sizeof(itemNameBuff), "%.19s", sale->product_name); printf("%s", itemNameBuff);
+  printf("\033[0m");
   printf("\r\033[47C");
+  printf("\033[92m");
   sprintf_s(quanBuff, sizeof(quanBuff), "%d", sale->product_quantity); printf("%s", quanBuff);
   printf("\r\033[58C");
+  printf("\033[93m");
   sprintf_s(priceBuff, sizeof(priceBuff), "%.2f", sale->product_price); printf("%s", priceBuff);
   printf("\r\033[71C");
   sprintf_s(discountBuff, sizeof(discountBuff), "%.2f", sale->product_discount); printf("%s", discountBuff);
@@ -656,6 +669,7 @@ void salesUIlist(Sales *sale){
   printf("\r\033[97C");
   sprintf_s(comBuff, sizeof(comBuff), "%.2f", sale->commission_total); printf("%s", comBuff);
   printf("\r\033[1B");
+  printf("\033[0m");
   printf("├──────────┼───────────┼─────────────────────┼──────────┼────────────┼──────────┼──────────────┼────────────┤\n");
 }
 void salesMenu(char *file_name){
@@ -691,7 +705,9 @@ void salesMenu(char *file_name){
     printf("│                                                                                                           │\n");
     printf("└───────────────────────────────────────────────────────────────────────────────────────────────────────────┘");
     printf("\r\033[1A\033[2C");
+    printf("\033[4m\033[92m");
     printf("Grand Total: %f\n\n", grand_total);
+    printf("\033[0m");
     fclose(f);
 
     printf("\nTotal Items [ %d ]\n", count);
